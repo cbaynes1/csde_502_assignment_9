@@ -1,0 +1,278 @@
+---
+title: "CSDE 502 Winter 2021, Assignment 9"
+author: "Colin Baynes (cbaynes@uw.edu)"
+output:
+  bookdown::html_document2:
+    number_sections: yes
+    self_contained: yes
+    code_folding: hide
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: no
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    fig_cap: yes
+    keep_tex: yes
+  html_document:
+    toc: yes
+    df_print: paged
+urlcolor: blue
+---
+
+```{r, include = F}
+library(captioner)
+table_nums <- captioner(prefix = "Table")
+figure_nums <- captioner(prefix = "Figure")
+# for having DIV tags
+knitr::knit_hooks$set(class = function(before, options, envir) {
+  if(before){
+    sprintf("<div class = '%s'>", options$class)
+  }else{
+    "</div>"
+  }
+})
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+___Explanation___:
+This assignment is intended to give you more practice delving into the Add Health data set and in manipulating additional variables. 
+
+___Instructions___: 
+
+1. Make sure your Rmd file has no local file system dependencies (i.e., anyone should be able to recreate the output HTML using only the Rmd source file).
+1. Make a copy of this Rmd file and add answers below each question. The code that generated the answers should be included, as well as the complete source code for the document.
+1. Change the YAML header above to identify yourself and include contact information.
+1. For any tables or figures, include captions and cross-references and any other document automation methods as necessary.
+1. Make sure your output HTML file looks appealing to the reader.
+1. Upload the final Rmd to your github repository.
+1. Download [`assn_id.txt`](http://staff.washington.edu/phurvitz/csde502_winter_2021/assignments/assn_id.txt) and include the URL to your Rmd file on github.com.
+1. Create a zip file from your copy of `assn_id.txt` and upload the zip file to the Canvas site for Assignment 9. ___The zip file should contain only the text file. Do not include any additional files in the zip file--everything should be able to run from the file you uploaded to github.com. Please use zip format and not 7z or any other compression/archive format.___
+
+
+#
+__Using the full household roster (you'll need to go back the full raw data source, [21600-0001-Data.dta](http://staff.washington.edu/phurvitz/csde502_winter_2021/data/21600-0001-Data.dta.zip)), create the following variables for each respondent. Document any decisions that you make regarding missing values, definitions, etc. in your narrative as well as in the R code.  Include a frequency tabulation and a histogram of each result.__
+```{r, include=F}
+#upload full raw data set
+setwd('C:/Users/Cbayn/Dropbox/CSDE 502/week 9')
+library(readstata13)
+df <- read.dta13("21600-0001-Data.dta")
+#save in temporary folder and return as a rds object
+tmpdir <- Sys.getenv("TEMP")
+write.csv(x = df, file = file.path(tmpdir, "df.csv"), row.names = FALSE)
+saveRDS(object = df, file = file.path(tmpdir, "df.RDS"))
+df_rds <- readRDS(file = file.path(tmpdir, "df.RDS"))
+```
+
+__Total number in household__
+
+See `r figure_nums(name = "tcap0", display = "cite")`
+
+_`r figure_nums(name = "tcap0", caption = "Household size of students")`_
+```{r, echo=F, warning=F}
+df.1 <- subset(df_rds, select = c(H1HR2A, H1HR2B, H1HR2C, H1HR2D, H1HR2E, H1HR2F, H1HR2G, H1HR2H, H1HR2I, H1HR2J, H1HR2K, H1HR2J, H1HR2M, H1HR2N, H1HR2O, H1HR2P, H1HR2Q, H1HR2R, H1HR2S, H1HR2T))
+attach(df.1)
+library(dplyr)
+df.2 <- df.1 %>% mutate_all(funs(type.convert(as.numeric(.))))
+library(magrittr)
+df.2 %<>% 
+    mutate_at(.vars = vars(matches("H1HR2.*")),
+              funs(
+                  case_when(
+                      . == 2 ~ 1,
+                      . > 1 ~ 0,
+                      TRUE ~ as.numeric(.)
+                  )
+              )
+    )
+df.2$total.HH <-rowSums(df.2)
+table(df.2$total.HH)
+df.2$total.HH<-as.character(df.2$total.HH)
+library(ggplot2)
+g1 <- ggplot(data = df.2, mapping = aes(x = total.HH)) +
+  geom_histogram(stat = "count") +
+  scale_x_discrete(limits = c(1:12)) +
+  xlab("Total number of household members") 
+g1 + ggtitle("Figure 1: Distribution of members of students' households")
+```
+#
+
+__Number of sisters__
+
+See `r figure_nums(name = "tcap1", display = "cite")`
+
+_`r figure_nums(name = "tcap1", caption = "Number of sisters living with student in same household")`_
+```{r, echo=F, warning=F}
+df.3 <- subset(df_rds, select = c(H1HR3A, H1HR3B, H1HR3C, H1HR3D, H1HR3E, H1HR3F, H1HR3G, H1HR3H, H1HR3I, H1HR3J, H1HR3K, H1HR3J, H1HR3M, H1HR3N, H1HR3O, H1HR3P, H1HR3Q, H1HR3R, H1HR3S, H1HR3T))
+attach(df.3)
+df.4 <- df.3 %>% mutate_all(funs(type.convert(as.numeric(.))))
+
+df.4 %<>% 
+    mutate_at(.vars = vars(matches("H1HR3.*")),
+              funs(
+                  case_when(
+                      . == 8 ~ 1,
+                      . != 8 ~ 0,
+                      TRUE ~ as.numeric(.)
+                  )
+              )
+    )
+df.4$total.sisters <-rowSums(df.4)
+table(df.4$total.sisters)
+df.4$total.sisters<-as.character(df.4$total.sisters)
+g2 <- ggplot(data = df.4, mapping = aes(x = total.sisters)) +
+  geom_histogram(stat = "count") +
+  scale_x_discrete(limits = c(0:12)) +
+  xlab("Total number of sisters") 
+g2 + ggtitle("Figure 2: Distribution of sisters of students that live in the students' households")
+```
+
+
+__Number of brothers__
+
+See `r figure_nums(name = "tcap2", display = "cite")`
+
+_`r figure_nums(name = "tcap2", caption = "Number of brothers living with student in same households")`_
+```{r, echo=F, warning=F}
+df.3 <- subset(df_rds, select = c(H1HR3A, H1HR3B, H1HR3C, H1HR3D, H1HR3E, H1HR3F, H1HR3G, H1HR3H, H1HR3I, H1HR3J, H1HR3K, H1HR3J, H1HR3M, H1HR3N, H1HR3O, H1HR3P, H1HR3Q, H1HR3R, H1HR3S, H1HR3T))
+attach(df.3)
+df.5 <- df.3 %>% mutate_all(funs(type.convert(as.numeric(.))))
+
+df.5 %<>% 
+    mutate_at(.vars = vars(matches("H1HR3.*")),
+              funs(
+                  case_when(
+                      . == 5 ~ 1,
+                      . != 5 ~ 0,
+                      TRUE ~ as.numeric(.)
+                  )
+              )
+    )
+df.5$total.brothers <-rowSums(df.5)
+table(df.5$total.brothers)
+df.5$total.brothers<-as.character(df.5$total.brothers)
+library(ggplot2)
+g3 <- ggplot(data = df.5, mapping = aes(x = total.brothers)) +
+  geom_histogram(stat = "count") +
+  scale_x_discrete(limits = c(0:12)) +
+  xlab("Total number of brothers") 
+g3 + ggtitle("Figure 3: Distribution of brothers of students that live in the students' 
+             households")
+```
+
+
+__Total number of siblings__
+
+See `r figure_nums(name = "tcap3", display = "cite")`
+
+_`r figure_nums(name = "tcap3", caption = "Number of siblings living with student in same households")`_
+```{r, echo=F, warning=F}
+df.3 <- subset(df_rds, select = c(H1HR3A, H1HR3B, H1HR3C, H1HR3D, H1HR3E, H1HR3F, H1HR3G, H1HR3H, H1HR3I, H1HR3J, H1HR3K, H1HR3J, H1HR3M, H1HR3N, H1HR3O, H1HR3P, H1HR3Q, H1HR3R, H1HR3S, H1HR3T))
+attach(df.3)
+df.6 <- df.3 %>% mutate_all(funs(type.convert(as.numeric(.))))
+
+df.6 %<>% 
+    mutate_at(.vars = vars(matches("H1HR3.*")),
+              funs(
+                  case_when(
+                      . == 5 ~ 1,
+                      . == 8 ~ 1,
+                      . < 5 ~ 0,
+                      . == 6 ~ 0,
+                      . == 7 ~ 0,
+                      . > 8 ~ 0,
+                                            TRUE ~ as.numeric(.)
+                  )
+              )
+    )
+df.6$total.siblings <-rowSums(df.6)
+table(df.6$total.siblings)
+df.6$total.siblings<-as.character(df.6$total.siblings)
+library(ggplot2)
+g4 <- ggplot(data = df.6, mapping = aes(x = total.siblings)) +
+  geom_histogram(stat = "count") +
+  scale_x_discrete(limits = c(0:12)) +
+  xlab("Total number of siblings") 
+g4+ ggtitle("Figure 4: Distribution of siblings of students that live in the students' households")
+```
+
+#
+
+__What proportion of students live with two biological parents? Include the analysis in your R code.__
+```{r, warning=F}
+df.7 <- subset(df_rds, select = c(H1HR6A, H1HR6B, H1HR6C, H1HR6D, H1HR6E, H1HR6F, H1HR6G, H1HR6H, H1HR6I, H1HR6J, H1HR6K, H1HR6J, H1HR6M, H1HR6N, H1HR6O, H1HR6P, H1HR6Q, H1HR6R, H1HR6S, H1HR6T))
+attach(df.3)
+df.8 <- df.7 %>% mutate_all(funs(type.convert(as.numeric(.))))
+
+df.8 %<>% 
+    mutate_at(.vars = vars(matches("H1HR6.*")),
+              funs(
+                  case_when(
+                      . == 1 ~ 1,
+                      . == 7 ~ 1,
+                      . == 2 ~ 0,
+                      . == 3 ~ 0,
+                      . == 4 ~ 0,
+                      . == 5 ~ 0,
+                      . == 6 ~ 0,
+                      . > 7 ~ 0,
+                                            TRUE ~ as.numeric(.)
+                  )
+              )
+    )
+df.8$total.biopar <-rowSums(df.8)
+table(df.8$total.biopar)
+3279/6504
+```
+Approximately 50.4% of students live with two biological parents.
+
+
+__Calculate the number of household members that are NOT biological mother, biological father, full brother or full sister. Create a contingency table and histogram for this variable.__
+
+
+```{r, include==F, warning=F}
+df.9 <- cbind(df.2$total.HH, df.8$total.biopar)
+colnames(df.9) <- c("total.HH", "total.biopar")
+df.9<-as.data.frame(df.9)
+df.9$total.HH<-as.numeric(df.9$total.HH)
+df.9$total.biopar<-as.numeric(df.9$total.biopar)
+df.9$total_not_biopar <- df.9$total.HH - df.9$total.biopar
+```
+See `r figure_nums(name = "tcap4", display = "cite")`
+
+_`r figure_nums(name = "tcap4", caption = "Number of household members living with student that are not biological parents of student")`_
+```{r echo=F, warning=F}
+#table(df.9$total_not_biopar)
+df.9$total.total_not_biopar<-as.character(df.9$total_not_biopar)
+library(ggplot2)
+g5 <- ggplot(data = df.9, mapping = aes(x = total_not_biopar)) +
+  geom_histogram(stat = "count") +
+  scale_x_discrete(limits = c(0:15)) +
+  xlab("Total number of siblings") 
+g5+ ggtitle("Figure 5: Distribution of members of students' households that are not biological parents")
+```
+
+See `r table_nums(name = "tcap0", display = "cite")`
+
+_`r table_nums(name = "tcap0", caption = "No. household members of students that are not biological parents")`_
+
+```{r, echo=F, warning=F}
+library(kableExtra)
+df.9.tab <-
+  df.9 %>% 
+    group_by(total_not_biopar) %>% 
+    summarise(n = n()) %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    mutate(`%` = `%` %>% round(1)) %>% 
+    kable(caption = "Table 1: No. household members of students that are not biological parents") %>% 
+    kable_styling(full_width = FALSE, position = "left")
+df.9.tab
+```
+# 
+
+__Source code__
+```{r comment=''}
+cat(readLines(con = "csde502_2021_assignment09.Rmd"), sep = '\n')
+```
